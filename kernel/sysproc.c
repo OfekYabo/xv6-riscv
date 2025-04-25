@@ -89,3 +89,11 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+ sys_memsize(void)
+ {
+     struct proc *p = myproc();
+     return p->sz;  // 'sz' is the process size in bytes
+ }
+ 
