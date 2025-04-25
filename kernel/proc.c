@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include <stddef.h> // For NULL
 
 struct cpu cpus[NCPU];
 
@@ -169,6 +170,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  p->exit_msg 
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -344,7 +346,7 @@ reparent(struct proc *p)
 // An exited process remains in the zombie state
 // until its parent calls wait().
 void
-exit(int status)
+exit(int status, const char *exit_msg)
 {
   struct proc *p = myproc();
 
@@ -375,7 +377,13 @@ exit(int status)
   
   acquire(&p->lock);
 
+  // Save the exit status and message
   p->xstate = status;
+  if (exit_msg == NULL) {
+      safestrcpy(p->exit_msg, "No message", sizeof(p->exit_msg));
+  } else {
+      safestrcpy(p->exit_msg, exit_msg, sizeof(p->exit_msg));
+  }
   p->state = ZOMBIE;
 
   release(&wait_lock);
@@ -388,50 +396,47 @@ exit(int status)
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int
-wait(uint64 addr)
+wait(uint64 status_addr, uint64 msg_addr)
 {
-  struct proc *pp;
-  int havekids, pid;
-  struct proc *p = myproc();
+    struct proc *p;
+    int havekids, pid;
+    struct proc *np = myproc();
 
-  acquire(&wait_lock);
+    acquire(&wait_lock);
+    for (;;) {
+        havekids = 0;
+        for (p = proc; p < &proc[NPROC]; p++) {
+            if (p->parent != np)
+                continue;
+            havekids = 1;
+            if (p->state == ZOMBIE) {
+                // Found a zombie process
+                pid = p->pid;
+                if (status_addr != 0 && copyout(np->pagetable, status_addr, (char *)&p->xstate, sizeof(p->xstate)) < 0) {
+                    release(&wait_lock);
+                    return -1;
+                }
 
-  for(;;){
-    // Scan through table looking for exited children.
-    havekids = 0;
-    for(pp = proc; pp < &proc[NPROC]; pp++){
-      if(pp->parent == p){
-        // make sure the child isn't still in exit() or swtch().
-        acquire(&pp->lock);
+                // Copy the exit message to userspace
+                if (msg_addr != 0 && copyout(np->pagetable, msg_addr, p->exit_msg, sizeof(p->exit_msg)) < 0) {
+                    release(&wait_lock);
+                    return -1;
+                }
 
-        havekids = 1;
-        if(pp->state == ZOMBIE){
-          // Found one.
-          pid = pp->pid;
-          if(addr != 0 && copyout(p->pagetable, addr, (char *)&pp->xstate,
-                                  sizeof(pp->xstate)) < 0) {
-            release(&pp->lock);
+                freeproc(p);
+                release(&wait_lock);
+                return pid;
+            }
+        }
+
+        // No children to wait for
+        if (!havekids || np->killed) {
             release(&wait_lock);
             return -1;
-          }
-          freeproc(pp);
-          release(&pp->lock);
-          release(&wait_lock);
-          return pid;
         }
-        release(&pp->lock);
-      }
-    }
 
-    // No point waiting if we don't have any children.
-    if(!havekids || killed(p)){
-      release(&wait_lock);
-      return -1;
+        sleep(np, &wait_lock);
     }
-    
-    // Wait for a child to exit.
-    sleep(p, &wait_lock);  //DOC: wait-sleep
-  }
 }
 
 // Per-CPU process scheduler.

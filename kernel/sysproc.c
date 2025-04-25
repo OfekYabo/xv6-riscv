@@ -9,10 +9,23 @@
 uint64
 sys_exit(void)
 {
-  int n;
-  argint(0, &n);
-  exit(n);
-  return 0;  // not reached
+    int status;
+    char exit_msg[32]; // Temporary buffer for the exit message
+
+    // Retrieve the status argument
+    argint(0, &status);
+
+    // Retrieve the exit message argument
+    if (argstr(1, exit_msg, sizeof(exit_msg)) < 0)
+        return -1;
+
+    // Save the exit message in the process's PCB
+    struct proc *p = myproc();
+    safestrcpy(p->exit_msg, exit_msg, sizeof(p->exit_msg));
+
+    // Call the actual exit function
+    exit(status);
+    return 0; // This line will never be reached
 }
 
 uint64
@@ -30,9 +43,16 @@ sys_fork(void)
 uint64
 sys_wait(void)
 {
-  uint64 p;
-  argaddr(0, &p);
-  return wait(p);
+    uint64 status_addr, msg_addr;
+
+    // Retrieve the status pointer
+    argaddr(0, &status_addr);
+
+    // Retrieve the exit message pointer
+    argaddr(1, &msg_addr);
+
+    // Call the actual wait function
+    return wait(status_addr, msg_addr);
 }
 
 uint64
@@ -96,4 +116,4 @@ uint64
      struct proc *p = myproc();
      return p->sz;  // 'sz' is the process size in bytes
  }
- 
+
