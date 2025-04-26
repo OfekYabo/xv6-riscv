@@ -27,7 +27,7 @@ wc(int fd, char *name)
   }
   if(n < 0){
     printf("wc: read error\n");
-    exit(1);
+    exit(1, "Read error");
   }
   printf("%d %d %d %s\n", l, w, c, name);
 }
@@ -39,16 +39,16 @@ main(int argc, char *argv[])
 
   if(argc <= 1){
     wc(0, "");
-    exit(0);
+    exit(0, "Processed standard input");
   }
 
   for(i = 1; i < argc; i++){
     if((fd = open(argv[i], 0)) < 0){
       printf("wc: cannot open %s\n", argv[i]);
-      exit(1);
+      exit(1, "Cannot open file");
     }
     wc(fd, argv[i]);
     close(fd);
   }
-  exit(0);
+  exit(0, "Processed all files");
 }
