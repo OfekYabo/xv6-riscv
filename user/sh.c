@@ -55,10 +55,20 @@ struct backcmd
   struct cmd *cmd;
 };
 
+char exit_msg[32];
+char *exit_msg_ptr = exit_msg;
+
 int fork1(void); // Fork but panics on failure.
 void panic(char *);
 struct cmd *parsecmd(char *);
 void runcmd(struct cmd *) __attribute__((noreturn));
+
+// Private functions
+void shWait(int* status) {
+  wait(0, exit_msg_ptr);
+    if (strlen(exit_msg) > 0)
+      printf("Child exited; exit message: %s\n", exit_msg_ptr);
+}
 
 // Execute cmd.  Never returns.
 void runcmd(struct cmd *cmd)
@@ -81,7 +91,7 @@ void runcmd(struct cmd *cmd)
   case EXEC:
     ecmd = (struct execcmd *)cmd;
     if (ecmd->argv[0] == 0)
-      exit(1, "Empty command");
+      exit(1, "Exec failed");
     exec(ecmd->argv[0], ecmd->argv);
     fprintf(2, "exec %s failed\n", ecmd->argv[0]);
     exit(1, "Exec failed");
@@ -101,7 +111,9 @@ void runcmd(struct cmd *cmd)
     lcmd = (struct listcmd *)cmd;
     if (fork1() == 0)
       runcmd(lcmd->left);
-    wait(0);
+    shWait(0);
+    //TODO: maybe delete this
+    //printf("Child exited; exit message: %s\n", exit_msg_ptr);
     runcmd(lcmd->right);
     break;
 
@@ -127,14 +139,18 @@ void runcmd(struct cmd *cmd)
     }
     close(p[0]);
     close(p[1]);
-    wait(0);
-    wait(0);
+    shWait(0);
+    shWait(0);
+    //TODO: maybe delete this
     break;
 
   case BACK:
     bcmd = (struct backcmd *)cmd;
     if (fork1() == 0)
       runcmd(bcmd->cmd);
+    //TODO: maybe delete this
+    // shWait(0);
+    // printf("Background process exited; exit message: %s\n", exit_msg_ptr);
     break;
   }
   exit(0, "Command executed successfully");
@@ -178,10 +194,7 @@ int main(void)
     }
     if (fork1() == 0)
       runcmd(parsecmd(buf));
-    int status;
-    char exit_msg[32];
-    wait(&status, exit_msg);
-    printf("Child exited with status %d, message: %s\n", status, exit_msg);
+    shWait(0);
   }
   exit(0, "Shell exited normally");
 }

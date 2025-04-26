@@ -24,7 +24,7 @@ sys_exit(void)
     safestrcpy(p->exit_msg, exit_msg, sizeof(p->exit_msg));
 
     // Call the actual exit function
-    exit(status);
+    exit(status, exit_msg);
     return 0; // This line will never be reached
 }
 
