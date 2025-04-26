@@ -19,6 +19,7 @@ main(int argc, char *argv[])
   int fd, i;
   char path[] = "stressfs0";
   char data[512];
+  char exit_msg[32]; // Buffer for exit messages
 
   printf("stressfs starting\n");
   memset(data, 'a', sizeof(data));
@@ -43,7 +44,7 @@ main(int argc, char *argv[])
     read(fd, data, sizeof(data));
   close(fd);
 
-  wait(0);
+  wait(0, exit_msg); // Updated to include the exit message buffer
 
-  exit(0);
+  exit(0, exit_msg); // Updated to include an exit message
 }

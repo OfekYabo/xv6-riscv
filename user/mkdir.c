@@ -9,15 +9,15 @@ main(int argc, char *argv[])
 
   if(argc < 2){
     fprintf(2, "Usage: mkdir files...\n");
-    exit(1);
+    exit(1, "Invalid usage");
   }
 
   for(i = 1; i < argc; i++){
     if(mkdir(argv[i]) < 0){
       fprintf(2, "mkdir: %s failed to create\n", argv[i]);
-      break;
+      exit(1, "Failed to create directory");
     }
   }
 
-  exit(0);
+  exit(0, "Directories created successfully");
 }
