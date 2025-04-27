@@ -491,114 +491,117 @@ wait(uint64 status_addr, uint64 msg_addr)
     }
 }
 
-int
-forkn(int num_children, int *pids)
-{
-    if (num_children < 1 || num_children > 16)
-        return -1;
+// int
+// forkn(int num_children, int *pids)
+// {
+//     if (num_children < 1 || num_children > 16)
+//         return -1;
 
-    struct proc *parent = myproc();
-    struct proc *child_list[16];
-    int spawned = 0;
+//     struct proc *parent = myproc();
+//     struct proc *child_list[16];
+//     int spawned = 0;
 
-    for (int i = 0; i < num_children; i++) {
-        struct proc *np = allocproc();
-        if (np == 0)
-            goto cleanup;
+//     for (int i = 0; i < num_children; i++) {
+//         struct proc *np = allocproc();
+//         if (np == 0)
+//             goto cleanup;
 
-        np->sz = parent->sz;
-        if (uvmcopy(parent->pagetable, np->pagetable, parent->sz) < 0) {
-            freeproc(np);
-            goto cleanup;
-        }
+//         np->sz = parent->sz;
+//         if (uvmcopy(parent->pagetable, np->pagetable, parent->sz) < 0) {
+//             freeproc(np);
+//             goto cleanup;
+//         }
 
-        *(np->trapframe) = *(parent->trapframe);
-        np->trapframe->a0 = i + 1;  // Child gets index (1..n)
+//         *(np->trapframe) = *(parent->trapframe);
+//         np->trapframe->a0 = i + 1;  // Child gets index (1..n)
 
-        for (int fd = 0; fd < NOFILE; fd++) {
-            if (parent->ofile[fd])
-                np->ofile[fd] = filedup(parent->ofile[fd]);
-        }
+//         for (int fd = 0; fd < NOFILE; fd++) {
+//             if (parent->ofile[fd])
+//                 np->ofile[fd] = filedup(parent->ofile[fd]);
+//         }
 
-        np->cwd = idup(parent->cwd);
-        safestrcpy(np->name, parent->name, sizeof(np->name));
+//         np->cwd = idup(parent->cwd);
+//         safestrcpy(np->name, parent->name, sizeof(np->name));
 
-        acquire(&wait_lock);
-        np->parent = parent;
-        release(&wait_lock);
+//         acquire(&wait_lock);
+//         np->parent = parent;
+//         release(&wait_lock);
 
-        pids[spawned] = np->pid;
-        child_list[spawned++] = np;
+//         pids[spawned] = np->pid;
+//         child_list[spawned++] = np;
 
-        release(&np->lock);
-    }
+//         release(&np->lock);
+//     }
 
-    // All children created successfully, set them runnable
-    for (int i = 0; i < spawned; i++) {
-        acquire(&child_list[i]->lock);
-        child_list[i]->state = RUNNABLE;
-        release(&child_list[i]->lock);
-    }
+//     // All children created successfully, set them runnable
+//     for (int i = 0; i < spawned; i++) {
+//         acquire(&child_list[i]->lock);
+//         child_list[i]->state = RUNNABLE;
+//         release(&child_list[i]->lock);
+//     }
 
-    return 0;  // Parent returns 0
+//     return 0;  // Parent returns 0
 
-cleanup:
-    for (int j = 0; j < spawned; j++) {
-        freeproc(child_list[j]);
-    }
-    return -1;
-}
+// cleanup:
+//     for (int j = 0; j < spawned; j++) {
+//         freeproc(child_list[j]);
+//     }
+//     return -1;
+// }
 
 //TODO: maybe return this
-// int forkn(int n, uint64 pids_addr) {
-//   struct proc *parent = myproc();
+int forkn(int n, uint64 pids_addr) {
+  struct proc *parent = myproc();
 
-//   // Debugging prints
-//   printf("forkn: n=%d, pids_addr=%p\n", n, pids_addr);
+  // Debugging prints
+  printf("forkn: n=%d, pids_addr=%p\n", n, pids_addr);
 
-//   if (n < 1 || n > 16)
-//       return -1;
+  if (n < 1 || n > 16)
+      return -1;
 
-//   int pids[n];
-//   int i;
+  int pids[n];
+  int i;
 
-//   for (i = 0; i < n; i++) {
-//       int pid = forksleep();
-//       if (pid < 0) {
-//           // Cleanup already-created children
-//           for (int j = 0; j < i; j++) {
-//               struct proc *child = &proc[pids[j]];
-//               acquire(&child->lock);
-//               child->state = UNUSED;
-//               release(&child->lock);
-//           }
-//           printf("forkn: failed to create child process\n");
-//           return -1;
-//       }
+  for (i = 0; i < n; i++) {
+      int pid = forksleep();
+      if (pid < 0) {
+          // Cleanup already-created children
+          for (int j = 0; j < i; j++) {
+              struct proc *child = &proc[pids[j]];
+              acquire(&child->lock);
+              child->state = UNUSED;
+              release(&child->lock);
+          }
+          printf("forkn: failed to create child process\n");
+          return -1;
+      }
 
-//       if (pid == 0) {
-//           // This is the child process
-//           return i + 1; // Return the index of the child process
-//       } else {
-//           // This is the parent process
-//           pids[i] = pid; // Store the child's PID
-//       }
-//   }
+      if (pid == 0) {
+          // This is the child process
+          printf("run: %d\n", i + 1);
+          return i + 1; // Return the index of the child process
+      } else {
+          // This is the parent process
+          pids[i] = pid; // Store the child's PID
+          printf("child created, PID: %d\n", pid);
+      }
+  }
 
-//   // Mark all children as RUNNABLE
-//   for (i = 0; i < n; i++) {
-//       struct proc *child = &proc[pids[i]];
-//       acquire(&child->lock);
-//       child->state = RUNNABLE;
-//       release(&child->lock);
-//   }
+  // Copy PIDs to user space
+  if (copyout(parent->pagetable, pids_addr, (char *)pids, n * sizeof(int)) < 0)
+  return -1;
+  
+  // Mark all children as RUNNABLE
+  for (i = 0; i < n; i++) {
+      struct proc *child = &proc[pids[i]];
+      acquire(&child->lock);
+      child->state = RUNNABLE;
+      printf("child runnable, PID: %d\n", pids[i]);
+      release(&child->lock);
+  }
 
-//   // Copy PIDs to user space
-//   if (copyout(parent->pagetable, pids_addr, (char *)pids, sizeof(pids)) < 0)
-//       return -1;
-
-//   return 0; // Parent process
-// }
+  return 0; // Parent process
+}
 
 // Implementation of waitall
 

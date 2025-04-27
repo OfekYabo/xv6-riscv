@@ -114,43 +114,43 @@ uint64
  }
 
 //TODO: return this
-// uint64
-// sys_forkn(void)
-// {
-//     //TODO: Debugging prints
-//     printf("sys_forkn: called\n");
-//     int n;
-//     uint64 pids_addr;
-
-//     // Retrieve arguments
-//     argint(0, &n);
-//     argaddr(1, &pids_addr);
-
-//     // Call the forkn function in proc.c
-//     return forkn(n, pids_addr);
-// }
-
-//TODO: maybe delete
 uint64
 sys_forkn(void)
 {
-    int num_children;
-    uint64 user_pids_ptr;
+    //TODO: Debugging prints
+    printf("sys_forkn: called\n");
+    int n;
+    uint64 pids_addr;
 
-    argint(0, &num_children);
-    argaddr(1, &user_pids_ptr);
+    // Retrieve arguments
+    argint(0, &n);
+    argaddr(1, &pids_addr);
 
-    int kernel_pids[16];  // Store child PIDs in kernel space
-
-    int result = forkn(num_children, kernel_pids);
-
-    if (result == 0) {  // Parent process
-        if (copyout(myproc()->pagetable, user_pids_ptr, (char*)kernel_pids, num_children * sizeof(int)) < 0)
-            return -1;
-    }
-
-    return result;  // Parent returns 0, children return 1..n
+    // Call the forkn function in proc.c
+    return forkn(n, pids_addr);
 }
+
+//TODO: maybe delete
+// uint64
+// sys_forkn(void)
+// {
+//     int num_children;
+//     uint64 user_pids_ptr;
+
+//     argint(0, &num_children);
+//     argaddr(1, &user_pids_ptr);
+
+//     int kernel_pids[16];  // Store child PIDs in kernel space
+
+//     int result = forkn(num_children, kernel_pids);
+
+//     if (result == 0) {  // Parent process
+//         if (copyout(myproc()->pagetable, user_pids_ptr, (char*)kernel_pids, num_children * sizeof(int)) < 0)
+//             return -1;
+//     }
+
+//     return result;  // Parent returns 0, children return 1..n
+// }
 
 int
 sys_waitall(void)
