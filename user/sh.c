@@ -112,8 +112,6 @@ void runcmd(struct cmd *cmd)
     if (fork1() == 0)
       runcmd(lcmd->left);
     shWait(0);
-    //TODO: maybe delete this
-    //printf("Child exited; exit message: %s\n", exit_msg_ptr);
     runcmd(lcmd->right);
     break;
 
@@ -141,16 +139,12 @@ void runcmd(struct cmd *cmd)
     close(p[1]);
     shWait(0);
     shWait(0);
-    //TODO: maybe delete this
     break;
 
   case BACK:
     bcmd = (struct backcmd *)cmd;
     if (fork1() == 0)
       runcmd(bcmd->cmd);
-    //TODO: maybe delete this
-    // shWait(0);
-    // printf("Background process exited; exit message: %s\n", exit_msg_ptr);
     break;
   }
   exit(0, "Command executed successfully");

@@ -19,10 +19,6 @@ sys_exit(void)
     if (argstr(1, exit_msg, sizeof(exit_msg)) < 0)
         return -1;
 
-    // Save the exit message in the process's PCB
-    struct proc *p = myproc();
-    safestrcpy(p->exit_msg, exit_msg, sizeof(p->exit_msg));
-
     // Call the actual exit function
     exit(status, exit_msg);
     return 0; // This line will never be reached
@@ -116,4 +112,58 @@ uint64
      struct proc *p = myproc();
      return p->sz;  // 'sz' is the process size in bytes
  }
+
+//TODO: return this
+// uint64
+// sys_forkn(void)
+// {
+//     //TODO: Debugging prints
+//     printf("sys_forkn: called\n");
+//     int n;
+//     uint64 pids_addr;
+
+//     // Retrieve arguments
+//     argint(0, &n);
+//     argaddr(1, &pids_addr);
+
+//     // Call the forkn function in proc.c
+//     return forkn(n, pids_addr);
+// }
+
+//TODO: maybe delete
+uint64
+sys_forkn(void)
+{
+    int num_children;
+    uint64 user_pids_ptr;
+
+    argint(0, &num_children);
+    argaddr(1, &user_pids_ptr);
+
+    int kernel_pids[16];  // Store child PIDs in kernel space
+
+    int result = forkn(num_children, kernel_pids);
+
+    if (result == 0) {  // Parent process
+        if (copyout(myproc()->pagetable, user_pids_ptr, (char*)kernel_pids, num_children * sizeof(int)) < 0)
+            return -1;
+    }
+
+    return result;  // Parent returns 0, children return 1..n
+}
+
+int
+sys_waitall(void)
+{
+    //TODO: Debugging prints
+    printf("sys_waitall: called\n");
+    uint64 n_addr, statuses_addr;
+
+    // Retrieve arguments
+    argaddr(0, &n_addr);
+    argaddr(1, &statuses_addr);
+
+    // Call the waitall function in proc.c
+    return waitall(n_addr, statuses_addr);
+}
 

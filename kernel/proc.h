@@ -90,6 +90,7 @@ struct proc {
   void *chan;                  // If non-zero, sleeping on chan
   int killed;                  // If non-zero, have been killed
   int xstate;                  // Exit status to be returned to parent's wait
+  char exit_msg[32];           // New field to store the exit message
   int pid;                     // Process ID
 
   // wait_lock must be held when using this:
@@ -104,5 +105,4 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-  char exit_msg[32]; // New field to store the exit message
 };

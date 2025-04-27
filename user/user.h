@@ -2,8 +2,10 @@ struct stat;
 
 // system calls
 int fork(void);
+int forkn(int n, int* pids);
 int exit(int status, const char *exit_msg) __attribute__((noreturn));
 int wait(int* status, const char* msg);
+int waitall(int* n, int* statuses);
 int pipe(int*);
 int write(int, const void*, int);
 int read(int, void*, int);
