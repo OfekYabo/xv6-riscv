@@ -326,54 +326,6 @@ fork(void)
   return pid;
 }
 
-int forksleep(void) {
-    int i, pid;
-    struct proc *np;
-    struct proc *p = myproc();
-
-    // Allocate process.
-    if ((np = allocproc()) == 0) {
-        return -1;
-    }
-
-    // Copy user memory from parent to child.
-    if (uvmcopy(p->pagetable, np->pagetable, p->sz) < 0) {
-        freeproc(np);
-        release(&np->lock);
-        return -1;
-    }
-    np->sz = p->sz;
-
-    // Copy saved user registers.
-    *(np->trapframe) = *(p->trapframe);
-
-    // Cause fork to return 0 in the child.
-    np->trapframe->a0 = 0;
-
-    // Increment reference counts on open file descriptors.
-    for (i = 0; i < NOFILE; i++) {
-        if (p->ofile[i])
-            np->ofile[i] = filedup(p->ofile[i]);
-    }
-    np->cwd = idup(p->cwd);
-
-    safestrcpy(np->name, p->name, sizeof(p->name));
-
-    pid = np->pid;
-
-    release(&np->lock);
-
-    acquire(&wait_lock);
-    np->parent = p;
-    release(&wait_lock);
-
-    acquire(&np->lock);
-    np->state = SLEEPING; // Set the child process to SLEEPING
-    release(&np->lock);
-
-    return pid;
-}
-
 // Pass p's abandoned children to init.
 // Caller must hold wait_lock.
 void
@@ -549,59 +501,7 @@ cleanup:
     return -1;
 }
 
-//TODO: maybe return this
-// int forkn(int n, uint64 pids_addr) {
-//   struct proc *parent = myproc();
-
-//   // Debugging prints
-//   printf("forkn: n=%d, pids_addr=%p\n", n, pids_addr);
-
-//   if (n < 1 || n > 16)
-//       return -1;
-
-//   int pids[n];
-//   int i;
-
-//   for (i = 0; i < n; i++) {
-//       int pid = forksleep();
-//       if (pid < 0) {
-//           // Cleanup already-created children
-//           for (int j = 0; j < i; j++) {
-//               struct proc *child = &proc[pids[j]];
-//               acquire(&child->lock);
-//               child->state = UNUSED;
-//               release(&child->lock);
-//           }
-//           printf("forkn: failed to create child process\n");
-//           return -1;
-//       }
-
-//       if (pid == 0) {
-//           // This is the child process
-//           return i + 1; // Return the index of the child process
-//       } else {
-//           // This is the parent process
-//           pids[i] = pid; // Store the child's PID
-//       }
-//   }
-
-//   // Mark all children as RUNNABLE
-//   for (i = 0; i < n; i++) {
-//       struct proc *child = &proc[pids[i]];
-//       acquire(&child->lock);
-//       child->state = RUNNABLE;
-//       release(&child->lock);
-//   }
-
-//   // Copy PIDs to user space
-//   if (copyout(parent->pagetable, pids_addr, (char *)pids, sizeof(pids)) < 0)
-//       return -1;
-
-//   return 0; // Parent process
-// }
-
 // Implementation of waitall
-
 int
 waitall(uint64 n, uint64 stat)
 {
@@ -687,58 +587,6 @@ waitall(uint64 n, uint64 stat)
   }
 }
 
-//TODO: maybe return this
-// int waitall(uint64 n_addr, uint64 statuses_addr) {
-//     struct proc *p = myproc();
-
-//     //TODO: Debugging prints
-//     printf("waitall: n_addr=%p, statuses_addr=%p\n", n_addr, statuses_addr);
-
-//     int statuses[NPROC];
-//     int count = 0;
-
-//     acquire(&wait_lock);
-//     for (;;) {
-//         int havekids = 0;
-//         for (struct proc *child = proc; child < &proc[NPROC]; child++) {
-//             if (child->parent != p)
-//                 continue;
-
-//             havekids = 1;
-//             acquire(&child->lock);
-//             if (child->state == ZOMBIE) {
-//                 statuses[count++] = child->xstate;
-//                 //TODO: Debugging prints
-//                 printf("waitall: child PID=%d exited with status=%d\n", child->pid, child->xstate);
-//                 freeproc(child);
-//                 release(&child->lock);
-//             } else {
-//                 release(&child->lock);
-//             }
-//         }
-
-//         if (!havekids)
-//             break;
-
-//         sleep(p, &wait_lock);
-//     }
-//     release(&wait_lock);
-
-//     // Copy results to user space
-//     if (copyout(p->pagetable, n_addr, (char *)&count, sizeof(count)) < 0 ||
-//         copyout(p->pagetable, statuses_addr, (char *)statuses, count * sizeof(int)) < 0)
-//         return -1;
-
-//     return 0;
-// }
-
-// Per-CPU process scheduler.
-// Each CPU calls scheduler() after setting itself up.
-// Scheduler never returns.  It loops, doing:
-//  - choose a process to run.
-//  - swtch to start running that process.
-//  - eventually that process transfers control
-//    via swtch back to the scheduler.
 void
 scheduler(void)
 {

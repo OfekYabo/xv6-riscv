@@ -113,24 +113,6 @@ uint64
      return p->sz;  // 'sz' is the process size in bytes
  }
 
-//TODO: return this
-// uint64
-// sys_forkn(void)
-// {
-//     //TODO: Debugging prints
-//     printf("sys_forkn: called\n");
-//     int n;
-//     uint64 pids_addr;
-
-//     // Retrieve arguments
-//     argint(0, &n);
-//     argaddr(1, &pids_addr);
-
-//     // Call the forkn function in proc.c
-//     return forkn(n, pids_addr);
-// }
-
-//TODO: maybe delete
 uint64
 sys_forkn(void)
 {
@@ -155,8 +137,6 @@ sys_forkn(void)
 int
 sys_waitall(void)
 {
-    //TODO: Debugging prints
-    printf("sys_waitall: called\n");
     uint64 n_addr, statuses_addr;
 
     // Retrieve arguments

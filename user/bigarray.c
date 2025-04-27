@@ -1,8 +1,7 @@
 #include "kernel/types.h"
 #include "user/user.h"
 
-#define ARRAY_SIZE (1 << 16) //TODO: return to this
-// #define ARRAY_SIZE (1 << 12) //TODO: for testing
+#define ARRAY_SIZE (1 << 16)
 #define NUM_CHILDREN 4
 
 int main(void) {
@@ -15,16 +14,10 @@ int main(void) {
         exit(1, "malloc failed");
     }
 
-
-    //TODO: Debugging prints
-    printf("before init, array=%p, pids=%p, statuses=%p\n", array, pids, statuses);
     // Initialize the array
     for (int i = 0; i < ARRAY_SIZE; i++) {
         array[i] = i;
     }
-
-    //TODO: Debugging prints
-    printf("bigarray: pids=%p, statuses=%p, NUM_CHILDREN=%d\n", pids, statuses, NUM_CHILDREN);
 
     // Fork child processes
     int ret = forkn(NUM_CHILDREN, pids);
@@ -32,13 +25,6 @@ int main(void) {
         printf("Error: forkn failed\n");
         exit(1, "Error: forkn failed\n");
     }
-
-    //TODO: Debugging prints
-    printf("bigarray: forked children PIDs: ");
-    for (int i = 0; i < NUM_CHILDREN; i++) {
-        printf("%d ", pids[i]);
-    }
-    printf("\n");
 
     // Child processes
     if (ret > 0) {
@@ -61,13 +47,6 @@ int main(void) {
         printf("waitall failed\n");
         free(array);
         exit(1, "waitall failed");
-    }
-
-    //TODO: Debugging prints
-    printf("bigarray: waited for %d children\n", num_collected);
-    for (int i = 0; i < num_collected; i++) {
-        //TODO: Debugging prints
-        printf("bigarray: Child %d exit status: %d\n", i, statuses[i]);
     }
 
     // Verify the number of children
