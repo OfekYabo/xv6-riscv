@@ -446,27 +446,32 @@ wait(uint64 status_addr, uint64 msg_addr)
 int
 forkn(int num_children, int *pids)
 {
+    // Validate the number of children to be less than or equal to 16
     if (num_children < 1 || num_children > 16)
         return -1;
 
-    struct proc *parent = myproc();
-    struct proc *child_list[16];
-    int spawned = 0;
+    struct proc *parent = myproc(); // Get the current process
+    struct proc *child_list[16]; // Array to hold pointers to child processes
+    int spawned = 0; // Number of successfully spawned children
 
+    // Allocate and initialize child processes
     for (int i = 0; i < num_children; i++) {
         struct proc *np = allocproc();
         if (np == 0)
             goto cleanup;
 
+        // Copy user memory from parent to child
         np->sz = parent->sz;
         if (uvmcopy(parent->pagetable, np->pagetable, parent->sz) < 0) {
             freeproc(np);
             goto cleanup;
         }
 
+        // Copy the parent's trapframe to the child (registers, etc.)
         *(np->trapframe) = *(parent->trapframe);
         np->trapframe->a0 = i + 1;  // Child gets index (1..n)
 
+        // Copy file descriptors and current working directory
         for (int fd = 0; fd < NOFILE; fd++) {
             if (parent->ofile[fd])
                 np->ofile[fd] = filedup(parent->ofile[fd]);
@@ -505,11 +510,12 @@ cleanup:
 int
 waitall(uint64 n, uint64 stat)
 {
-  struct proc *pp;
-  struct proc *p = myproc();
-  int child_num, zombie_num;
-  int result[NPROC];
+  struct proc *pp; // Process pointer
+  struct proc *p = myproc(); // Get the current process
+  int child_num, zombie_num; // Number of children and zombies
+  int result[NPROC]; // Array to hold exit statuses
 
+  // count the number of children
   acquire(&wait_lock);
   for (pp = proc; pp < &proc[NPROC]; pp++)
   {
@@ -518,6 +524,8 @@ waitall(uint64 n, uint64 stat)
       child_num++;
     }
   }
+
+  // If no children, return immediately
   if (child_num == 0)
   {
     if (n)
@@ -525,16 +533,21 @@ waitall(uint64 n, uint64 stat)
     release(&wait_lock);
     return 0;
   }
+
+
+  // Loop until all children are zombies
   for (;;)
   {
     zombie_num = 0;
 
+    // check if the current process has been killed
     if (killed(p))
     {
       release(&wait_lock);
       return -1;
     }
 
+    // iterate all processes to find zombie children
     for (pp = proc; pp < &proc[NPROC]; pp++)
     {
       if (pp->parent == p)
@@ -555,6 +568,7 @@ waitall(uint64 n, uint64 stat)
       }
     }
 
+    // If all children are zombies, we can proceed
     if (zombie_num == child_num)
     {
       if (stat != 0 && copyout(p->pagetable, (uint64)stat, (char *)result, zombie_num * sizeof(int)) < 0)
@@ -583,6 +597,7 @@ waitall(uint64 n, uint64 stat)
       return 0;
     }
 
+    // If not all children are zombies, sleep and wait for them
     sleep(p, &wait_lock);
   }
 }
