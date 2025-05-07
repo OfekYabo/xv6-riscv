@@ -22,6 +22,13 @@ trapinit(void)
   initlock(&tickslock, "time");
 }
 
+//TODO: implement
+void
+initpeterson(int n)
+{
+  // initlock(&tickslock, "time");
+}
+
 // set up to take exceptions and traps while in the kernel.
 void
 trapinithart(void)
