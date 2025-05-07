@@ -11,7 +11,7 @@ void
 main()
 {
   if(cpuid() == 0){
-    initpeterson(15);
+    initpeterson();
     consoleinit();
     printfinit();
     printf("\n");

@@ -24,7 +24,7 @@ trapinit(void)
 
 //TODO: implement
 void
-initpeterson(int n)
+initpeterson()
 {
   // initlock(&tickslock, "time");
 }

@@ -90,15 +90,18 @@ sys_uptime(void)
   return xticks;
 }
 
+// peterson lock system calls
 uint64
 sys_peterson_create(void)
 {
+  // TODO: implement
   return peterson_create();
 }
 
 uint64
 sys_peterson_acquire(void)
 {
+  // TODO: implement
   int lock_id;
   int role;
   argint(0, &lock_id);
@@ -113,6 +116,7 @@ sys_peterson_acquire(void)
 uint64
 sys_peterson_release(void)
 {
+  // TODO: implement
   int n;
   if(argint(0, &n) < 0)
     return -1;
@@ -122,6 +126,7 @@ sys_peterson_release(void)
 uint64
 sys_peterson_destroy(void)
 {
+  // TODO: implement
   int n;
   if(argint(0, &n) < 0)
     return -1;
