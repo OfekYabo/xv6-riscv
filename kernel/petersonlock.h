@@ -1,5 +1,8 @@
+#include "types.h"
+#include <stdbool.h>
 
-// Long-term locks for processes
 struct petersonlock {
-    uint locked;       // Is the lock held?
-  };
+    bool created; // Indicates if the lock is active
+    uint lock; // role 0: -1 / role 1: 1 / free: 0
+    bool flags [2]; // flags for each role
+};

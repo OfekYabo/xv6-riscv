@@ -8,6 +8,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct petersonlock;
 
 // bio.c
 void            binit(void);
@@ -123,6 +124,14 @@ void            acquiresleep(struct sleeplock*);
 void            releasesleep(struct sleeplock*);
 int             holdingsleep(struct sleeplock*);
 void            initsleeplock(struct sleeplock*, char*);
+
+// petersonlock.c
+extern struct   petersonlock petersonlocks[PETERSONLOCK];
+void            initpeterson(void);
+void            initpetersonlock(struct petersonlock*);
+int             peterson_create(void);
+void            peterson_acquire(struct petersonlock *lk, int role);
+void            peterson_release(struct petersonlock *lk, int role);
 
 // string.c
 int             memcmp(const void*, const void*, uint);
