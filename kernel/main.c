@@ -3,15 +3,26 @@
 #include "memlayout.h"
 #include "riscv.h"
 #include "defs.h"
+#include "petersonlock.h"
+
 
 volatile static int started = 0;
+extern struct spinlock peterson_lock_table_lock;
+extern struct peterson_lock peterson_locks[];
 
 // start() jumps here in supervisor mode on all CPUs.
 void
 main()
 {
   if(cpuid() == 0){
-    initpeterson();
+    //initppeterson();
+    initlock(&peterson_lock_table_lock, "peterson_table");
+    for (int i = 0; i < MAX_PETERSON_LOCKS; i++) {
+      peterson_locks[i].used = 0;
+      peterson_locks[i].flag[0] = 0;
+      peterson_locks[i].flag[1] = 0;
+      peterson_locks[i].turn = 0;
+    }
     consoleinit();
     printfinit();
     printf("\n");

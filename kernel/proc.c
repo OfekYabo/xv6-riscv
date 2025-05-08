@@ -685,72 +685,23 @@ procdump(void)
 int
 peterson_create(void)
 {
-  //TODO: Implement this function
-  struct proc *p = myproc();
-  struct peterson_lock *plock;
-
-  if((plock = (struct peterson_lock *)kalloc()) == 0){
-    return -1;
-  }
-
-  plock->flag[0] = 0;
-  plock->flag[1] = 0;
-  plock->turn = 0;
-
-  p->peterson_lock = plock;
-
   return 0;
 }
 
 int
 peterson_acquire(int lock_id, int role)
 {
-  //TODO: Implement this function
-  struct proc *p = myproc();
-  struct peterson_lock *plock = p->peterson_lock;
-
-  if (lock_id < 0 || lock_id >= NLOCKS)
-    return -1;
-  if (role < 0 || role >= NLOCKS)
-    return -1;
-
-  plock->flag[role] = 1;
-  plock->turn = role;
-  while (plock->flag[1 - role] == 1 && plock->turn == role) {
-    // busy wait
-  }
-
   return 0;
 }
 
 int
 peterson_release(int lock_id)
 {
-  //TODO: Implement this function
-  struct proc *p = myproc();
-  struct peterson_lock *plock = p->peterson_lock;
-
-  if (lock_id < 0 || lock_id >= PETERSONLOCK)
-    return -1;
-
-  plock->flag[0] = 0;
-  plock->flag[1] = 0;
-
   return 0;
 }
 
 int
 peterson_destroy(int lock_id)
 {
-  //TODO: Implement this function
-  struct proc *p = myproc();
-  struct peterson_lock *plock = p->peterson_lock;
-
-  if (lock_id < 0 || lock_id >= PETERSONLOCK)
-    return -1;
-
-  kfree((void *)plock);
-  p->peterson_lock = 0;
-
   return 0;
 }

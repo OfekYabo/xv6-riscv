@@ -5,6 +5,8 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "petersonlock.h"
+
 
 uint64
 sys_exit(void)
@@ -91,45 +93,127 @@ sys_uptime(void)
 }
 
 // peterson lock system calls
+extern struct spinlock peterson_lock_table_lock;
+extern struct peterson_lock peterson_locks[];
+
 uint64
 sys_peterson_create(void)
 {
-  // TODO: implement
-  return peterson_create();
+  acquire(&peterson_lock_table_lock);
+
+  for (int i = 0; i < MAX_PETERSON_LOCKS; i++) {
+    if (peterson_locks[i].used == 0) {
+      peterson_locks[i].used = 1;
+      peterson_locks[i].flag[0] = 0;
+      peterson_locks[i].flag[1] = 0;
+      peterson_locks[i].turn = 0;
+      release(&peterson_lock_table_lock);
+      return i;
+    }
+  }
+
+  release(&peterson_lock_table_lock);
+  return -1;  // No free lock found
 }
 
 uint64
 sys_peterson_acquire(void)
 {
-  // TODO: implement
-  int lock_id;
-  int role;
+  int lock_id, role;
+
+  // Extract syscall arguments (no return value from argint!)
   argint(0, &lock_id);
   argint(1, &role);
-  if (lock_id < 0 || lock_id >= NLOCKS)
+
+  // Validate arguments
+  if (lock_id < 0 || lock_id >= MAX_PETERSON_LOCKS)
     return -1;
-  if (role < 0 || role >= NLOCKS)
+  if (role != 0 && role != 1)
     return -1;
-  return peterson_acquire(lock_id, role);
+
+  struct peterson_lock *lock = &peterson_locks[lock_id];
+
+  acquire(&peterson_lock_table_lock);
+  if (!lock->used) {
+    release(&peterson_lock_table_lock);
+    return -1;
+  }
+  release(&peterson_lock_table_lock);
+
+  // Begin Peterson lock protocol
+  __sync_lock_test_and_set(&lock->flag[role], 1);  // indicate interest
+  __sync_synchronize();                            // memory barrier
+
+  __sync_lock_test_and_set(&lock->turn, 1 - role); // yield to the other
+  __sync_synchronize();
+
+  // Wait until the other process is not interested or it's our turn
+  while (lock->flag[1 - role] && lock->turn == 1 - role) {
+    yield();  // voluntarily give up the CPU
+  }
+
+  return 0;
 }
+
 
 uint64
 sys_peterson_release(void)
 {
-  // TODO: implement
-  int n;
-  if(argint(0, &n) < 0)
+  int lock_id, role;
+
+  // Retrieve syscall arguments
+  argint(0, &lock_id);
+  argint(1, &role);
+
+  // Validate inputs
+  if (lock_id < 0 || lock_id >= MAX_PETERSON_LOCKS)
     return -1;
-  return peterson_release(n);
+  if (role != 0 && role != 1)
+    return -1;
+
+  struct peterson_lock *lock = &peterson_locks[lock_id];
+
+  acquire(&peterson_lock_table_lock);
+  if (!lock->used) {
+    release(&peterson_lock_table_lock);
+    return -1;
+  }
+  release(&peterson_lock_table_lock);
+
+  // Release the lock
+  __sync_lock_release(&lock->flag[role]);
+  __sync_synchronize();  // Ensure memory ordering
+
+  return 0;
 }
+
 
 uint64
 sys_peterson_destroy(void)
 {
-  // TODO: implement
-  int n;
-  if(argint(0, &n) < 0)
+  int lock_id;
+
+  argint(0, &lock_id);
+
+  // Validate input
+  if (lock_id < 0 || lock_id >= MAX_PETERSON_LOCKS)
     return -1;
-  return peterson_destroy(n);
+
+  struct peterson_lock *lock = &peterson_locks[lock_id];
+
+  acquire(&peterson_lock_table_lock);
+  if (!lock->used) {
+    release(&peterson_lock_table_lock);
+    return -1;
+  }
+
+  // Mark lock as free and clear state
+  lock->used = 0;
+  lock->flag[0] = 0;
+  lock->flag[1] = 0;
+  lock->turn = 0;
+
+  release(&peterson_lock_table_lock);
+  return 0;
 }
 
