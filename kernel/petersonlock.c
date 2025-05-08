@@ -5,7 +5,7 @@
 
 struct petersonlock petersonlocks [PETERSONLOCK]; // array of Peterson locks
 
-uint64 initpetersonlock(int lock_id) {
+int peterson_destroy(int lock_id) {
     // Validate the lock_id
     if (lock_id < 0 || lock_id >= PETERSONLOCK)
         return -1; // invalid lock id
@@ -28,7 +28,7 @@ void initpeterson() {
   }
 }
 
-uint64 peterson_create(void) {
+int peterson_create(void) {
     for (int i = 0; i < PETERSONLOCK; i++) {
         if (!petersonlocks[i].created) {
             petersonlocks[i].created = 1;
@@ -38,7 +38,7 @@ uint64 peterson_create(void) {
     return -1; // no available lock
 }
 
-uint64 peterson_acquire(int lock_id, int role) {
+int peterson_acquire(int lock_id, int role) {
     // Validate the lock_id and role
     if (role < 0 || role > 1)
         return -1; // invalid role
@@ -67,7 +67,7 @@ uint64 peterson_acquire(int lock_id, int role) {
     return 0; // success
 }
 
-uint64 peterson_release(int lock_id, int role) {
+int peterson_release(int lock_id, int role) {
     // Validate the lock_id and role
     if (role < 0 || role > 1)
         return -1; // invalid role
