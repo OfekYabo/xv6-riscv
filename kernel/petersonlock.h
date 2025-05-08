@@ -1,8 +1,7 @@
 #include "types.h"
-#include <stdbool.h>
 
 struct petersonlock {
-    bool created; // Indicates if the lock is active
-    uint lock; // role 0: -1 / role 1: 1 / free: 0
-    bool flags [2]; // flags for each role
+    uint created; // Indicates if the lock is active
+    uint lock; // 0: unlocked, 1: locked
+    uint flags [2]; // flags for each role
 };

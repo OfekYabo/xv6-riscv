@@ -5,7 +5,6 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
-#include "petersonlock.h"
 
 uint64
 sys_exit(void)
@@ -109,11 +108,7 @@ sys_peterson_acquire(void)
     return -1; // invalid role
   if (lock_id < 0 || lock_id >= PETERSONLOCK)
     return -1; // invalid lock id
-  if (petersonlocks[lock_id].created == 0)
-    return -1; // lock not created  
-  role = role == 0 ? -1 : 1;
-  peterson_acquire(&petersonlocks[lock_id], role);
-  return 0; // success
+  return peterson_acquire(lock_id, role);
 }
 
 uint64
@@ -127,14 +122,10 @@ sys_peterson_release(void)
     return -1; // invalid role
   if (lock_id < 0 || lock_id >= PETERSONLOCK)
     return -1; // invalid lock id
-  if (petersonlocks[lock_id].created == 0)
-    return -1; // lock not created  
-  role = role == 0 ? -1 : 1;
-  peterson_release(&petersonlocks[lock_id], role);
-  return 0; // success
+  return peterson_release(lock_id, role);
 }
 
-uint64
+int
 sys_peterson_destroy(void)
 {
   int lock_id;
@@ -142,9 +133,6 @@ sys_peterson_destroy(void)
   if (lock_id < 0 || lock_id >= PETERSONLOCK) {
     return -1; // invalid lock id
   }
-  if (petersonlocks[lock_id].created == 0)
-    return -1; // lock not created 
-  initpetersonlock(&petersonlocks[lock_id]);
-  return 0; // success
+  return initpetersonlock(lock_id);
 }
 

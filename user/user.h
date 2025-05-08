@@ -26,7 +26,7 @@ int uptime(void);
 int peterson_create(void);
 int peterson_acquire(int lock_id, int role);
 int peterson_release(int lock_id, int role);
-int peterson_destroy(int lock_id);
+int peterson_destroy(int);
 
 // ulib.c
 int stat(const char*, struct stat*);

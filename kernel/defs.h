@@ -126,12 +126,11 @@ int             holdingsleep(struct sleeplock*);
 void            initsleeplock(struct sleeplock*, char*);
 
 // petersonlock.c
-extern struct   petersonlock petersonlocks[PETERSONLOCK];
 void            initpeterson(void);
-void            initpetersonlock(struct petersonlock*);
-int             peterson_create(void);
-void            peterson_acquire(struct petersonlock *lk, int role);
-void            peterson_release(struct petersonlock *lk, int role);
+uint64             initpetersonlock(int lock_id);
+uint64             peterson_create(void);
+uint64             peterson_acquire(int lock_id, int role);
+uint64             peterson_release(int lock_id, int role);
 
 // string.c
 int             memcmp(const void*, const void*, uint);
