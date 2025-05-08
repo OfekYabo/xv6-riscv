@@ -1,5 +1,4 @@
 #include "petersonlock.h"
-#include "defs.h"
 #include "param.h"
 
 struct petersonlock petersonlocks [PETERSONLOCK];
