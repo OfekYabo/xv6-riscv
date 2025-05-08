@@ -1,5 +1,4 @@
 #include "petersonlock.h"
-#include "param.h"
 #include "defs.h"
 #define PETERSONLOCK 15    // number of locks for Peterson's algorithm
 

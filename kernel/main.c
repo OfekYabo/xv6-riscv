@@ -11,7 +11,6 @@ void
 main()
 {
   if(cpuid() == 0){
-    initpeterson();
     consoleinit();
     printfinit();
     printf("\n");
@@ -29,6 +28,7 @@ main()
     iinit();         // inode table
     fileinit();      // file table
     virtio_disk_init(); // emulated hard disk
+    initpeterson();  // initialize Peterson locks
     userinit();      // first user process
     __sync_synchronize();
     started = 1;
