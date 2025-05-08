@@ -36,3 +36,7 @@ entry("getpid");
 entry("sbrk");
 entry("sleep");
 entry("uptime");
+entry("peterson_create");
+entry("peterson_destroy");
+entry("peterson_acquire");
+entry("peterson_release");

@@ -3,5 +3,6 @@
         "types.h": "c",
         "riscv.h": "c",
         "defs.h": "c",
+        "peterson.h": "c",
     },
 }
