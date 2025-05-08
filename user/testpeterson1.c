@@ -23,9 +23,9 @@ int main() {
 
         // Critical section
         if (role == 0) {
-            printf("Parent process in critical section\n");
+            printf("Parent process in critical section (index: %d)\n", i + 1);
         } else {
-            printf("Child process in critical section\n");
+            printf("Child process in critical section (index: %d)\n", i + 1);
         }
 
         // Release the lock

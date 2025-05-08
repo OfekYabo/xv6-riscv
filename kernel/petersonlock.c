@@ -1,5 +1,12 @@
-#include "petersonlock.h"
+#include "types.h"
+#include "param.h"
+#include "memlayout.h"
+#include "riscv.h"
+#include "spinlock.h"
+#include "proc.h"
 #include "defs.h"
+#include "petersonlock.h"
+
 #define PETERSONLOCK 15    // number of locks for Peterson's algorithm
 
 struct petersonlock petersonlocks [PETERSONLOCK]; // array of Peterson locks
