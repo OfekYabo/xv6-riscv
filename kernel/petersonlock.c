@@ -24,7 +24,7 @@ int peterson_destroy(int lock_id) {
 // Initialize the Peterson locks
 void initpeterson() {
   for (int i = 0; i < PETERSONLOCK; i++) {
-    initpetersonlock(i);
+    peterson_destroy(i);
   }
 }
 

@@ -122,6 +122,6 @@ sys_peterson_destroy(void)
 {
   int lock_id;
   argint(0, &lock_id);
-  return initpetersonlock(lock_id);
+  return peterson_destroy(lock_id);
 }
 
