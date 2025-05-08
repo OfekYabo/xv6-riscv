@@ -1,17 +1,23 @@
 #include "petersonlock.h"
 #include "param.h"
 #include "defs.h"
+#define PETERSONLOCK 15    // number of locks for Peterson's algorithm
 
-struct petersonlock petersonlocks [PETERSONLOCK];
+struct petersonlock petersonlocks [PETERSONLOCK]; // array of Peterson locks
 
 uint64 initpetersonlock(int lock_id) {
+    // Validate the lock_id
+    if (lock_id < 0 || lock_id >= PETERSONLOCK)
+        return -1; // invalid lock id
     if (petersonlocks[lock_id].created == 0)
-        return -1; // lock not created 
-    struct petersonlock lk = petersonlocks[lock_id];
-    lk.created = 0;
-    lk.lock = 0;
-    lk.flags[0] = 0;
-    lk.flags[1] = 0;
+        return -1; // lock not created
+
+    // Initialize the lock
+    struct petersonlock *lk = &petersonlocks[lock_id];
+    lk->created = 0;
+    lk->lock = 0;
+    lk->flags[0] = 0;
+    lk->flags[1] = 0;
     return 0; // success
 }
 
@@ -33,18 +39,25 @@ uint64 peterson_create(void) {
 }
 
 uint64 peterson_acquire(int lock_id, int role) {
+    // Validate the lock_id and role
+    if (role < 0 || role > 1)
+        return -1; // invalid role
+    if (lock_id < 0 || lock_id >= PETERSONLOCK)
+        return -1; // invalid lock id
     if (petersonlocks[lock_id].created == 0)
         return -1; // lock not created 
-    struct petersonlock lk = petersonlocks[lock_id];
+    struct petersonlock *lk = &petersonlocks[lock_id];
+
+    // Peterson's algorithm for mutual exclusion
     while (1) {
         __sync_synchronize(); // Ensure memory synchronization
-        if (__sync_lock_test_and_set(&lk.lock, 1) == 0) {
+        if (__sync_lock_test_and_set(&lk->lock, 1) == 0) {
             // Successfully acquired the lock
             __sync_synchronize(); // Ensure memory synchronization
-            lk.flags[role] = 1; // Set the flag for the current role
+            lk->flags[role] = 1; // Set the flag for the current role
             __sync_synchronize(); // Ensure memory synchronization
         }
-        if (!lk.flags[role]) {
+        if (!lk->flags[role]) {
             yield(); // Give up the CPU and retry
         } else {
             // Successfully acquired the lock for the current role
@@ -55,13 +68,20 @@ uint64 peterson_acquire(int lock_id, int role) {
 }
 
 uint64 peterson_release(int lock_id, int role) {
+    // Validate the lock_id and role
+    if (role < 0 || role > 1)
+        return -1; // invalid role
+    if (lock_id < 0 || lock_id >= PETERSONLOCK)
+        return -1; // invalid lock id
     if (petersonlocks[lock_id].created == 0)
         return -1; // lock not created 
-    struct petersonlock lk = petersonlocks[lock_id];
-    if (lk.flags[role]) {
-        lk.flags[role] = 0; // Clear the flag for the current role
+    struct petersonlock *lk = &petersonlocks[lock_id];
+
+    // Release the lock
+    if (lk->flags[role]) {
+        lk->flags[role] = 0; // Clear the flag for the current role
         __sync_synchronize(); // Ensure memory synchronization
-        __sync_lock_release(&lk.lock); // Release the lock
+        __sync_lock_release(&lk->lock); // Release the lock
         __sync_synchronize(); // Ensure memory synchronization
 
     }

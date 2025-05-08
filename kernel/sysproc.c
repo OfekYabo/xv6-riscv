@@ -104,10 +104,6 @@ sys_peterson_acquire(void)
   int role;
   argint(0, &lock_id);
   argint(1, &role);
-  if (role < 0 || role > 1)
-    return -1; // invalid role
-  if (lock_id < 0 || lock_id >= PETERSONLOCK)
-    return -1; // invalid lock id
   return peterson_acquire(lock_id, role);
 }
 
@@ -118,21 +114,14 @@ sys_peterson_release(void)
   int role;
   argint(0, &lock_id);
   argint(1, &role);
-  if (role < 0 || role > 1)
-    return -1; // invalid role
-  if (lock_id < 0 || lock_id >= PETERSONLOCK)
-    return -1; // invalid lock id
   return peterson_release(lock_id, role);
 }
 
-int
+uint64
 sys_peterson_destroy(void)
 {
   int lock_id;
   argint(0, &lock_id);
-  if (lock_id < 0 || lock_id >= PETERSONLOCK) {
-    return -1; // invalid lock id
-  }
   return initpetersonlock(lock_id);
 }
 

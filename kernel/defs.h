@@ -126,7 +126,7 @@ int             holdingsleep(struct sleeplock*);
 void            initsleeplock(struct sleeplock*, char*);
 
 // petersonlock.c
-void            initpeterson(void);
+void               initpeterson(void);
 uint64             initpetersonlock(int lock_id);
 uint64             peterson_create(void);
 uint64             peterson_acquire(int lock_id, int role);
