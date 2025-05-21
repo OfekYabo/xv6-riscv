@@ -36,7 +36,6 @@ main(int argc, char *argv[])
   }
 
   printf("Process %d (TID %d): in critical section\n", getpid(), tid);
-  printf("Process %d (TID %d): exited critical section\n", getpid(), tid);
 
   if (tournament_release() < 0) {
     printf("Process %d (TID %d): failed to release\n", getpid(), tid);
