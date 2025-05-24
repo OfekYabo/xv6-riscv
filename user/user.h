@@ -1,6 +1,4 @@
 struct stat;
-typedef unsigned int uint;
-
 
 // system calls
 int fork(void);

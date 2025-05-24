@@ -1,6 +1,6 @@
-#include "user.h"
-#include "stddef.h"
-#include "user.h"
+#include "kernel/types.h"
+#include "kernel/stat.h"
+#include "user/user.h"
 
 #define MAX_PROCESSES 16
 #define MAX_LEVELS 4  // log2(16)
@@ -8,25 +8,14 @@
 static int proc_index = -1;                 // process index (0 to N-1)
 static int num_levels = 0;                  // how many levels in the tree
 
-
-
-#define MAX_PROCS 16
-#define MAX_LEVELS 4  // log2(16) = 4
-static int all_lock_ids[MAX_PROCS - 1]; // MAX_PROCS is enough (won't exceed 15)
-
-
-// Declare the system calls manually
-int peterson_create(void);
-int peterson_acquire(int lock_id, int role);
-int peterson_release(int lock_id, int role);
-int peterson_destroy(int lock_id);
+static int all_lock_ids[MAX_PROCESSES - 1]; // MAX_PROCESSES is enough (won't exceed 15)
 
 int tournament_id = -1;
 int num_procs = 0;
 int levels = 0;
 
-int lock_ids[MAX_PROCS][MAX_LEVELS]; // locks for each process at each level
-int roles[MAX_PROCS][MAX_LEVELS];    // role (0 or 1) for each process at each level
+int lock_ids[MAX_PROCESSES][MAX_LEVELS]; // locks for each process at each level
+int roles[MAX_PROCESSES][MAX_LEVELS];    // role (0 or 1) for each process at each level
 
 int
 tournament_create(int processes) {

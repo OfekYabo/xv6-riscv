@@ -4,5 +4,6 @@
         "riscv.h": "c",
         "defs.h": "c",
         "peterson.h": "c",
+        "stat.h": "c"
     },
 }
