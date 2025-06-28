@@ -6,6 +6,10 @@
 #include "defs.h"
 #include "fs.h"
 
+// TODO: check if this is needed?
+#include "spinlock.h"
+#include "proc.h"
+
 /*
  * the kernel's page table.
  */
@@ -184,9 +188,13 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
     if(do_free){
-      uint64 pa = PTE2PA(*pte);
-      kfree((void*)pa);
+      // Only free if not shared
+      if (!(*pte & PTE_S)) {
+        uint64 pa = PTE2PA(*pte);
+        kfree((void*)pa);
+      }
     }
+
     *pte = 0;
   }
 }
@@ -437,3 +445,74 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+uint64
+map_shared_pages(struct proc* src_proc, struct proc* dst_proc, uint64 src_va, uint64 size) {
+  if (size == 0)
+    return 0;
+
+  // Align addresses and sizes
+  uint64 src_start = PGROUNDDOWN(src_va);
+  uint64 src_end = PGROUNDUP(src_va + size);
+  uint64 offset = src_va - src_start;
+  uint64 num_pages = (src_end - src_start) / PGSIZE;
+
+  // Find a destination virtual address to map to
+  uint64 dst_va = PGROUNDUP(dst_proc->sz); // next free page in dst
+  uint64 curr_src = src_start;
+  uint64 curr_dst = dst_va;
+
+  for (int i = 0; i < num_pages; i++) {
+    pte_t *pte = walk(src_proc->pagetable, curr_src, 0);
+    if (pte == 0)
+      return 0;
+    if (!(*pte & PTE_V) || !(*pte & PTE_U))
+      return 0;
+
+    uint64 pa = PTE2PA(*pte);
+    int flags = PTE_FLAGS(*pte) | PTE_S;
+
+    if (mappages(dst_proc->pagetable, curr_dst, PGSIZE, pa, flags) != 0)
+      return 0;
+
+    curr_src += PGSIZE;
+    curr_dst += PGSIZE;
+  }
+
+  // Update destination's sz (round up to next page)
+  dst_proc->sz = dst_va + (num_pages * PGSIZE);
+
+  return dst_va + offset; // return address with original offset
+}
+
+
+uint64
+unmap_shared_pages(struct proc* p, uint64 addr, uint64 size) {
+  if (size == 0)
+    return -1;
+
+  uint64 start = PGROUNDDOWN(addr);
+  uint64 end = PGROUNDUP(addr + size);
+  uint64 num_pages = (end - start) / PGSIZE;
+
+  for (uint64 va = start; va < end; va += PGSIZE) {
+    pte_t *pte = walk(p->pagetable, va, 0);
+    if (pte == 0 || !(*pte & PTE_V))
+      return -1;
+
+    if (!(*pte & PTE_S))  // not a shared mapping
+      return -1;
+  }
+
+  // Only unmap the pages — do not free physical memory
+  uvmunmap(p->pagetable, start, num_pages, 0);
+
+  // Reduce sz if we’re removing memory from the top
+  if (start + num_pages * PGSIZE == PGROUNDUP(p->sz)) {
+    p->sz = start;
+  }
+
+  return 0;
+}
+
+
