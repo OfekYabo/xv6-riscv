@@ -682,12 +682,16 @@ procdump(void)
   }
 }
 
+// Find a process by its PID. Returns a pointer to the process struct if found and not UNUSED, otherwise returns 0.
 struct proc*
 find_proc_by_pid(int pid) {
+  // Iterate over the process table
   for (struct proc *p = proc; p < &proc[NPROC]; p++) {
-    if (p->state != UNUSED && p->pid == pid)
-      return p;
+    // Check if PID matches and process is not UNUSED
+    if (p->pid == pid && p->state != UNUSED)
+      return p; // Return pointer to process
   }
+  // Not found
   return 0;
 }
 
