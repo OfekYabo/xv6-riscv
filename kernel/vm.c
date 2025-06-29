@@ -451,9 +451,13 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 // Map a region of memory from src_proc into dst_proc as shared pages.
 // src_va: virtual address in source process
 // size: number of bytes to map
-// Returns: virtual address in destination process corresponding to src_va, or 0 on error
+// Returns: virtual address in destination process corresponding to src_va, or -1 on error
+//
+// LOCKING: The caller must hold both src_proc->lock and dst_proc->lock before calling this function.
+// This is required to safely access and modify process fields and page tables, as per the assignment and teacher's clarifications.
 uint64
 map_shared_pages(struct proc* src_proc, struct proc* dst_proc, uint64 src_va, uint64 size) {
+  // Assumes both src_proc and dst_proc are locked by caller
   if (size == 0)
     return -1;
 
@@ -495,9 +499,16 @@ map_shared_pages(struct proc* src_proc, struct proc* dst_proc, uint64 src_va, ui
   return dst_va + offset;
 }
 
-
+// Unmap a region of shared memory from process p.
+// addr: virtual address to unmap
+// size: number of bytes to unmap
+// Returns: 0 on success, -1 on error
+//
+// LOCKING: The caller must hold p->lock before calling this function.
+// This is required to safely access and modify process fields and page tables, as per the assignment and teacher's clarifications.
 uint64
 unmap_shared_pages(struct proc* p, uint64 addr, uint64 size) {
+  // Assumes p is locked by caller
   if (size == 0)
     return -1;
 
