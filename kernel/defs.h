@@ -192,7 +192,6 @@ void            virtio_disk_intr(void);
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
 
-// TODO: maybe dont need this?
 uint64          sys_map_shared_pages(void);
 uint64          sys_unmap_shared_pages(void);
 

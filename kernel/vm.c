@@ -5,8 +5,6 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
-
-// TODO: check if this is needed?
 #include "spinlock.h"
 #include "proc.h"
 
