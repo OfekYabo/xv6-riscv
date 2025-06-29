@@ -3,7 +3,7 @@
 #include "user.h"
 
 #define PGSIZE        4096
-#define MAX_CHILDREN  4
+#define MAX_CHILDREN  10
 #define MSG_LEN       64
 
 // Header for each log message in the shared buffer
@@ -93,27 +93,35 @@ main(void)
     close(p2c[i][1]);
   }
 
+  // Parent: poll the buffer and print messages as they appear, concurrently with children
+  uint64 page_end = base + PGSIZE;
+  uint8 *scan_start = (uint8 *)(((base + 3) & ~3)); // First aligned header
+  int messages_seen[MAX_CHILDREN] = {0}; // Track messages per child (optional, for demo)
+  int total_seen = 0;
+  int expected = MAX_CHILDREN; // Expect one message per child
+  while (total_seen < expected) {
+    uint8 *p = scan_start;
+    while ((uint64)p + sizeof(struct log_header) < page_end) {
+      struct log_header *h = (struct log_header *)p;
+      uint16 len = h->msg_len;
+      uint16 idx = h->child_idx;
+      if (len && !messages_seen[idx]) {
+        if ((uint64)p + sizeof(struct log_header) + len > page_end) break;
+        char buf[MSG_LEN+1];
+        memmove(buf, p + sizeof(struct log_header), len);
+        buf[len] = 0;
+        printf("Parent read from child %d: %s\n", idx, buf);
+        messages_seen[idx] = 1;
+        total_seen++;
+      }
+      p += (len ? sizeof(struct log_header) + len : sizeof(struct log_header));
+      p = (uint8 *)(((uint64)p + 3) & ~3); // Align to next 4-byte boundary
+    }
+    sleep(1); // Yield to children, avoid busy-wait
+  }
+
   // Wait for all children to finish
   for (int i = 0; i < MAX_CHILDREN; i++) wait(0);
 
-  // Parent scans the buffer and prints all messages
-  uint64 page_end = base + PGSIZE;
-  uint8 *p = (uint8 *)(((base + 3) & ~3));           // First aligned header
-  while ((uint64)p + sizeof(struct log_header) < page_end) {
-    struct log_header *h = (struct log_header *)p;
-    uint16 len = h->msg_len;
-    uint16 idx = h->child_idx;
-    if (len) { //check if the message is valid
-      if ((uint64)p + sizeof(struct log_header) + len > page_end) break;
-      char buf[MSG_LEN+1];
-      memmove(buf, p + sizeof(struct log_header), len);
-      buf[len] = 0;
-      printf("Parent read from child %d: %s\n", idx, buf);
-      p += sizeof(struct log_header) + len;
-    } else {
-      p += sizeof(struct log_header);
-    }
-    p = (uint8 *)(((uint64)p + 3) & ~3); // Align to next 4-byte boundary
-  }
   exit(0);
 }
