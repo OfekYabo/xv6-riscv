@@ -681,3 +681,23 @@ procdump(void)
     printf("\n");
   }
 }
+
+// Find a process by its PID. Returns a pointer to the process struct if found and not UNUSED, otherwise returns 0.
+//
+// LOCKING: This function acquires the process lock before returning a pointer to the process. The caller is responsible for releasing the lock.
+//          This ensures that any access to process fields after calling this function is properly synchronized.
+struct proc*
+find_proc_by_pid(int pid) {
+  // Iterate over the process table
+  for (struct proc *p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock); // Acquire lock before checking fields
+    if (p->pid == pid && p->state != UNUSED) {
+      // Return with lock held; caller must release
+      return p; // Return the process pointer if found and not UNUSED with lock held
+    }
+    release(&p->lock); // Release lock if not a match
+  }
+  // Not found
+  return 0;
+}
+

@@ -5,6 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -166,17 +168,19 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
 
 // Remove npages of mappings starting from va. va must be
 // page-aligned. The mappings must exist.
-// Optionally free the physical memory.
+// If do_free is set, free the physical memory, but only if the page is not shared (PTE_S not set).
 void
 uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 {
   uint64 a;
   pte_t *pte;
 
+  // Ensure va is page-aligned
   if((va % PGSIZE) != 0)
     panic("uvmunmap: not aligned");
 
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
+    // Get the PTE for this virtual address
     if((pte = walk(pagetable, a, 0)) == 0)
       panic("uvmunmap: walk");
     if((*pte & PTE_V) == 0)
@@ -184,9 +188,13 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
     if(do_free){
-      uint64 pa = PTE2PA(*pte);
-      kfree((void*)pa);
+      // Only free the physical page if it is not shared (PTE_S not set)
+      if (!(*pte & PTE_S)) {
+        uint64 pa = PTE2PA(*pte);
+        kfree((void*)pa);
+      }
     }
+    // Remove the mapping from the page table
     *pte = 0;
   }
 }
@@ -437,3 +445,94 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+// Map a region of memory from src_proc into dst_proc as shared pages.
+// src_va: virtual address in source process
+// size: number of bytes to map
+// Returns: virtual address in destination process corresponding to src_va, or -1 on error
+//
+// LOCKING: The caller must hold both src_proc->lock and dst_proc->lock before calling this function.
+// This is required to safely access and modify process fields and page tables, as per the assignment and teacher's clarifications.
+uint64
+map_shared_pages(struct proc* src_proc, struct proc* dst_proc, uint64 src_va, uint64 size) {
+  // Assumes both src_proc and dst_proc are locked by caller
+  if (size == 0)
+    return -1;
+
+  // Align source address and size to page boundaries
+  uint64 src_start = PGROUNDDOWN(src_va);
+  uint64 src_end = PGROUNDUP(src_va + size);
+  uint64 offset = src_va - src_start; // offset within first page
+  uint64 num_pages = (src_end - src_start) / PGSIZE;
+
+  // Find the next available page-aligned address in the destination process
+  uint64 dst_va = PGROUNDUP(dst_proc->sz); // destination mapping starts here
+  uint64 curr_src = src_start;
+  uint64 curr_dst = dst_va;
+
+  for (int i = 0; i < num_pages; i++) {
+    // Get the PTE for the current source page
+    pte_t *pte = walk(src_proc->pagetable, curr_src, 0);
+    if (pte == 0)
+      return -1; // Error: source page not mapped
+    if (!(*pte & PTE_V) || !(*pte & PTE_U))
+      return -1; // Error: not valid or not user-accessible
+
+    // Get the physical address and flags, add PTE_S to mark as shared
+    uint64 pa = PTE2PA(*pte);
+    int flags = PTE_FLAGS(*pte) | PTE_S;
+
+    // Map the physical page into the destination process
+    if (mappages(dst_proc->pagetable, curr_dst, PGSIZE, pa, flags) != 0)
+      return -1; // Error: mapping failed
+
+    curr_src += PGSIZE;
+    curr_dst += PGSIZE;
+  }
+
+  // Update the destination process's size to include the new mapping
+  dst_proc->sz = dst_va + (num_pages * PGSIZE);
+
+  // Return the virtual address in the destination process, with the correct offset
+  return dst_va + offset;
+}
+
+// Unmap a region of shared memory from process p.
+// addr: virtual address to unmap
+// size: number of bytes to unmap
+// Returns: 0 on success, -1 on error
+//
+// LOCKING: The caller must hold p->lock before calling this function.
+// This is required to safely access and modify process fields and page tables, as per the assignment and teacher's clarifications.
+uint64
+unmap_shared_pages(struct proc* p, uint64 addr, uint64 size) {
+  // Assumes p is locked by caller
+  if (size == 0)
+    return -1;
+
+  // Align address and size to page boundaries
+  uint64 start = PGROUNDDOWN(addr);
+  uint64 end = PGROUNDUP(addr + size);
+  uint64 num_pages = (end - start) / PGSIZE;
+
+  // Validate that all pages in the range are mapped and marked as shared
+  for (uint64 va = start; va < end; va += PGSIZE) {
+    pte_t *pte = walk(p->pagetable, va, 0);
+    if (pte == 0 || !(*pte & PTE_V))
+      return -1; // Error: not mapped
+    if (!(*pte & PTE_S))  // not a shared mapping
+      return -1;
+  }
+
+  // Unmap the pages from the page table, but do not free physical memory
+  uvmunmap(p->pagetable, start, num_pages, 0);
+
+  // If the unmapped region was at the top of the address space, shrink sz
+  if (start + num_pages * PGSIZE == PGROUNDUP(p->sz)) {
+    p->sz = start;
+  }
+
+  return 0;
+}
+
+
