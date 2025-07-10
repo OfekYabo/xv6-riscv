@@ -134,7 +134,6 @@ sys_map_shared_pages(void) {
 //
 // LOCKING: This function acquires the lock for the current process before calling unmap_shared_pages.
 // The unmap_shared_pages function assumes the process lock is held. The lock is released before returning.
-// This follows the assignment and teacher's clarifications that all process field accesses must be protected by the process lock.
 uint64
 sys_unmap_shared_pages(void) {
   uint64 addr;

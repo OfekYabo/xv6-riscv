@@ -348,7 +348,7 @@ typedef uint64 *pagetable_t; // 512 PTEs
 // shift a physical address to the right place for a PTE.
 #define PA2PTE(pa) ((((uint64)pa) >> 12) << 10)
 
-#define PTE2PA(pte) (((pte) >> 10) << 12)
+#define PTE2PA(pte) (((pte) >> 10) << 12) // Extract the physical address from a PTE by removing the flag bits and shifting to the correct address alignment.
 
 #define PTE_FLAGS(pte) ((pte) & 0x3FF)
 

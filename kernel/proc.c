@@ -693,7 +693,7 @@ find_proc_by_pid(int pid) {
     acquire(&p->lock); // Acquire lock before checking fields
     if (p->pid == pid && p->state != UNUSED) {
       // Return with lock held; caller must release
-      return p; // Return the process pointer if found and not UNUSED with lock held
+      return p; // Return the process pointer if found and not UNUSED
     }
     release(&p->lock); // Release lock if not a match
   }

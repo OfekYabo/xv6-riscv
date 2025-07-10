@@ -42,7 +42,10 @@ main(void)
     pipe(p2c[i]);
     int idx = i;
     int pid = fork();
-    if (pid == 0) {                       // Child process
+
+    // ---------------- Child process -----------------------
+    
+    if (pid == 0) {                       
       close(p2c[idx][1]);                 // Only read from pipe
 
       uint64 shared;
